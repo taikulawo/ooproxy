@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use ooproxy::client::Client;
 use tokio::net::{TcpListener, TcpStream};
 
 #[tokio::main]
