@@ -26,7 +26,7 @@ where
     // 初始化 sockaddr_in6 结构的空内存，传到 syscall，通过指针拿到数据
     // C 语言的传数据经常用指针这么干
     let mut sockaddr: libc::sockaddr_in6 = unsafe { mem::zeroed()};
-    let socklen = mem::size_of::<libc::sockaddr_in6>();
+    let mut socklen = mem::size_of::<libc::sockaddr_in6>();
     // https://stackoverflow.com/questions/50384395/why-does-casting-from-a-reference-to-a-c-void-pointer-require-a-double-cast
     // So to recap, the double cast is necessary to first coerce from a reference to a raw pointer,
     // then from a raw pointer cast to a c_void,

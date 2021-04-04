@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{io, net::SocketAddr};
 
 use ooproxy::client::Client;
 use tokio::net::{TcpListener, TcpStream};
@@ -12,6 +12,7 @@ async fn main() {
     }
 }
 
-async fn handle_client(peer_left: TcpStream) {
-    Client::from_socket(socks);
+async fn handle_client(peer_left: TcpStream) -> io::Result<()>{
+    let client =  Client::from_socket(peer_left).await?;
+    Ok(())
 }

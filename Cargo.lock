@@ -142,6 +142,7 @@ checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
 name = "ooproxy"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "libc",
  "log",
  "nix",
