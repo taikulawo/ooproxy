@@ -1,4 +1,5 @@
 use std::ops::Range;
+use std::str::from_utf8;
 const EXT_SERVER_NAME: &[u8] = &[0, 0];
 // len_range作为长度，获取长度之内的数据
 // 0x01 0x02 0x03 0x04
@@ -40,7 +41,7 @@ pub struct TlsRecord<'a> {
 
 // 解析 TlsClientHello，我们当前只关心 server_name
 // https://tools.ietf.org/html/rfc6066#section-3
-struct TlsClientHello {
+pub struct TlsClientHello {
     server_name: Option<Box<str>>
 }
 pub fn parse_tls_record<'a>(data: &'a [u8]) -> Result<TlsRecord<'a>, &'static str> {
@@ -52,7 +53,7 @@ pub fn parse_tls_record<'a>(data: &'a [u8]) -> Result<TlsRecord<'a>, &'static st
         fragment,
     })
 }
-pub fn parse_client_hello(data: &[u8]) -> Result<TlsRecord, &'static str>{
+pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str>{
     let TlsRecord {
         content_type,
         major_version,
@@ -93,17 +94,23 @@ pub fn parse_client_hello(data: &[u8]) -> Result<TlsRecord, &'static str>{
     while exts.len() > 4 {
         let ext_type = &exts[0..2];
         let ext_data = slice_by_len_at_range(&exts, 2..4)?;
+        // 移除掉当前extension
+        // 这样 exts 就以下一次extension开头
         exts = truncate_before(&exts, 2..4)?;
         if ext_type == EXT_SERVER_NAME {
             // server_name extension
-            server_name = Some()
+            if ext_data[3] == 0x00 {
+                let raw_name = slice_by_len_at_range(&ext_data, 3..5)?;
+                let raw_name = from_utf8(&raw_name).map_err(|_| "error when parse from raw data")?;
+                server_name = Some(String::from(raw_name).into_boxed_str());
+            }
         }
     }
+    Ok(TlsClientHello {
+        server_name
+    })
 }
 
-fn parse_server_name_ext(data: &[u8]) -> Result<Option<&str>, &'static str> {
-
-}
 // struct {
 //     ProtocolVersion client_version;
 //     Random random;
@@ -133,7 +140,7 @@ fn test_parse() {
         0x02, 0x03, 0x03, 0x02, 0x01, 0x02, 0x02, 0x02, 0x03, 0x01, 0x01, 0x00, 0x0f, 0x00, 0x01,
         0x01,
     ];
-    let TlsRecord {
-
+    let TlsClientHello {
+        server_name
     } = parse_client_hello(&data).unwrap();
 }

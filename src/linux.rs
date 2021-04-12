@@ -1,4 +1,7 @@
-use std::{io::{self, ErrorKind}, mem, net::{SocketAddrV4, SocketAddrV6}, os::unix::prelude::AsRawFd};
+use std::{io, mem, net::SocketAddrV6};
+use std::os::unix::prelude::AsRawFd;
+use std::net::SocketAddrV4;
+use std::io::ErrorKind;
 
 use libc::{c_void, socklen_t};
 use nix::sys::socket::{getsockopt, sockopt::OriginalDst};
