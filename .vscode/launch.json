@@ -1,0 +1,138 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'ooproxy'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "ooproxy",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'ooproxy'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ooproxy",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "ooproxy",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'ooproxy'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=ooproxy",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "ooproxy",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'cell'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=cell",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "cell",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'cell'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=cell",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "cell",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'to_owned'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=to_owned",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "to_owned",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'to_owned'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=to_owned",
+                    "--package=ooproxy"
+                ],
+                "filter": {
+                    "name": "to_owned",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
