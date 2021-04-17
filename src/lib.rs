@@ -3,3 +3,4 @@ pub mod client;
 pub mod stream;
 pub mod tls;
 pub mod protocols;
+pub mod config;

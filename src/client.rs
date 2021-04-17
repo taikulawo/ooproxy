@@ -1,9 +1,11 @@
+use std::sync::Arc;
 use std::{borrow::Cow, io, net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6}, time::Duration, vec};
 
 use bytes::{Bytes, BytesMut};
 use log::{debug, info};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time::timeout};
 
+use crate::config::Config;
 use crate::protocols::handshake;
 use crate::{linux::{get_original_address_v4, get_original_address_v6}, tls};
 
@@ -66,6 +68,7 @@ impl From<(Address, u16)> for Destination {
 
 
 pub struct Client {
+    config: Arc<Config>,
     left: TcpStream,
     src: SocketAddr,
     pub dest: Destination,
@@ -88,7 +91,7 @@ fn error_invalid_input<T>(msg: &'static str) -> io::Result<T> {
     Err(io::Error::new(io::ErrorKind::InvalidInput, msg))
 }
 impl Client {
-    pub async fn from_socket(mut peer_left: TcpStream) -> io::Result<Self> {
+    pub async fn from_socket(mut peer_left: TcpStream, config: Arc<Config>) -> io::Result<Self> {
         let left_src = peer_left.peer_addr()?;
         let src_port = peer_left.local_addr()?.port();
         let dest = get_original_address_v4(&peer_left)
@@ -155,6 +158,7 @@ impl Client {
             // 上面的 dest 类型直到这里 dest 赋值给 Destination 类型的字段成员
             // dest 的类型才真正被确认，之前的 into 一直推导出 unknown
             dest,
+            config: config,
             from_port: src_port,
             left: peer_left,
             src: left_src,
@@ -176,7 +180,8 @@ impl Client {
             src,
             mut dest,
             from_port,
-            pending_data
+            config,
+            pending_data,
         } = self;
         let wait = Duration::from_millis(500);
         let mut buf = BytesMut::with_capacity(2048);
@@ -206,6 +211,7 @@ impl Client {
             left,
             src,
             pending_data,
+            config,
         })
     }
     // connect to socks5 server
@@ -214,10 +220,12 @@ impl Client {
             ref dest,
             ref from_port,
             ref left,
+            config,
             ..
         } = self;
-        let mut stream = TcpStream::connect(dest.into()).await?;
-        handshake(&mut stream, dest, self.pending_data).await?;
+        let socks_server = config.socks5_server;
+        let mut stream = TcpStream::connect(socks_server).await?;
+        handshake(&mut stream, dest, self.pending_data.clone()).await?;
         // we should handshake with socks5 server as the socks client 
         Ok(stream)
     }
