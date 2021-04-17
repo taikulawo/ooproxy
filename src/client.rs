@@ -1,9 +1,10 @@
 use std::{borrow::Cow, io, net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6}, time::Duration, vec};
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use log::{debug, info};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpStream, time::timeout};
 
+use crate::protocols::handshake;
 use crate::{linux::{get_original_address_v4, get_original_address_v6}, tls};
 
 #[derive(Clone, Debug)]
@@ -69,6 +70,7 @@ pub struct Client {
     src: SocketAddr,
     pub dest: Destination,
     from_port: u16,
+    pending_data: Option<Bytes>
 }
 
 // 归一化处理，统一用 ipv6 比较
@@ -152,10 +154,11 @@ impl Client {
         Ok(Client {
             // 上面的 dest 类型直到这里 dest 赋值给 Destination 类型的字段成员
             // dest 的类型才真正被确认，之前的 into 一直推导出 unknown
-            dest: dest,
+            dest,
             from_port: src_port,
             left: peer_left,
             src: left_src,
+            pending_data: None
         })
     }
     
@@ -165,31 +168,58 @@ impl Client {
     // REDIRECT 情况下不会有 socks 的握手流程
     // 起手流量是 TLS client hello
     // 需要我们从 TLS 嗅探出 domain name
+    // 用于做 DNS 远程解析
     // 注意： 这里是 (self), 所以这函数会 contume 掉 Self
     pub async fn retrive_dest(self) -> io::Result<Client> {
         let Client {
             mut left,
             src,
-            dest,
+            mut dest,
             from_port,
+            pending_data
         } = self;
         let wait = Duration::from_millis(500);
         let mut buf = BytesMut::with_capacity(2048);
+        let mut pending_data = None;
         buf.resize(buf.capacity(), 0);
         if let Ok(len) = timeout(wait, left.read(&mut buf)).await? {
+            // 只保留读出的数据，其他的丢弃
+            // 这样保证往socket回写时不会写入初始化时的 0
             buf.truncate(len);
             match tls::parse_client_hello(&buf) {
                 Err(err) => info!("fail to parse hello: {}", err),
-                Ok(parser) => {
-                    
+                Ok(hello) => {
+                    if let Some(server_name) = hello.server_name {
+                        dest = (server_name.as_ref(), dest.port).into();
+                    }
                 }
             }
+            // 将从 socket 读取出的数据都存起来，后面发给server
+            // 通过tls parser 获取SNI只是为了remote dns
+            // 由于我们没有证书，无法做https代理
+            // 所以建立 tcp socket 后将从client读取的tls hello透明发给server
+            pending_data = Some(buf.freeze());
         }
         Ok(Client{
-            dest: dest,
             from_port,
+            dest,
             left,
-            src
+            src,
+            pending_data,
         })
     }
+    // connect to socks5 server
+    pub async fn connect_remote_server(&self) -> io::Result<TcpStream>{
+        let Client {
+            ref dest,
+            ref from_port,
+            ref left,
+            ..
+        } = self;
+        let mut stream = TcpStream::connect(dest.into()).await?;
+        handshake(&mut stream, dest, self.pending_data).await?;
+        // we should handshake with socks5 server as the socks client 
+        Ok(stream)
+    }
+    
 }
