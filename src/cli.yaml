@@ -8,14 +8,14 @@ args:
         short: h
         long: host
         value_name: host
-        about: host which ooproxy bind on
+        help: host which ooproxy bind on
         takes_value: true
         default_value: "::"
     - port:
         short: p
         long: port
         value_name: port
-        about: port which ooproxy listen on
+        help: port which ooproxy listen on
         required: true
     # socks5 server
     # 最后会个socks5 server握手，并将流量发给socks5 server
@@ -28,5 +28,8 @@ args:
         takes_value: true
         required: true
     - remote-dns:
+        value_name: remote_dns
+        # takes_value: true
+        # default_value: true
         help: >
-        Parse SNI from TLS client hello, and then use server_name extension to resolve dns remotely. Useful for bypass dns poisoning.
+          Parse SNI from TLS client hello, and then use server_name extension to resolve dns remotely. Useful for bypass dns poisoning.

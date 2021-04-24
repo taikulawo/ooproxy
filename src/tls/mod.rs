@@ -13,7 +13,8 @@ fn slice_by_len_at_range(data: &[u8], len_range: Range<usize>) -> Result<&[u8], 
     for bit in len_in_bits {
         actual_len = actual_len << 8 | (*bit as usize)
     }
-    data.get(len_range.end .. len_range.end +  actual_len).ok_or("error when get index")
+    data.get(len_range.end..len_range.end + actual_len)
+        .ok_or("error when get index")
 }
 
 // 移除 len_range.end 之前的数据
@@ -22,11 +23,10 @@ fn slice_by_len_at_range(data: &[u8], len_range: Range<usize>) -> Result<&[u8], 
 // 0x01 0x02 0x03 0x04
 // 0x01 表明长度为1
 // 最后获得 0x03 及之后数据
-fn truncate_before(data: &[u8], len_range: Range<usize>) -> Result<&[u8], &'static str>{
+fn truncate_before(data: &[u8], len_range: Range<usize>) -> Result<&[u8], &'static str> {
     let len = slice_by_len_at_range(data, len_range.clone())?.len();
-    Ok(&data[len_range.end + len ..])
+    Ok(&data[len_range.end + len..])
 }
-
 
 pub struct TlsRecord<'a> {
     content_type: u8,
@@ -36,13 +36,13 @@ pub struct TlsRecord<'a> {
     // } ProtocolVersion;
     major_version: u8,
     minor_version: u8,
-    fragment: &'a [u8]
+    fragment: &'a [u8],
 }
 
 // 解析 TlsClientHello，我们当前只关心 server_name
 // https://tools.ietf.org/html/rfc6066#section-3
 pub struct TlsClientHello {
-    pub server_name: Option<Box<str>>
+    pub server_name: Option<Box<str>>,
 }
 pub fn parse_tls_record<'a>(data: &'a [u8]) -> Result<TlsRecord<'a>, &'static str> {
     let fragment = slice_by_len_at_range(&data, 3..5)?;
@@ -53,12 +53,12 @@ pub fn parse_tls_record<'a>(data: &'a [u8]) -> Result<TlsRecord<'a>, &'static st
         fragment,
     })
 }
-pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str>{
+pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str> {
     let TlsRecord {
         content_type,
         major_version,
         minor_version,
-        fragment
+        fragment,
     } = parse_tls_record(&data)?;
     if major_version != 3 {
         return Err("unknow tls version");
@@ -78,7 +78,7 @@ pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str>{
 
     // Random 32bytes
     // Session ID Length 2 bytes
-    // Session ID 
+    // Session ID
     // 34..35 Session ID Length
     let remaining = truncate_before(&client_hello_body, 34..35)?;
     // Cipher Suites Length
@@ -101,14 +101,13 @@ pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str>{
             // server_name extension
             if ext_data[3] == 0x00 {
                 let raw_name = slice_by_len_at_range(&ext_data, 3..5)?;
-                let raw_name = from_utf8(&raw_name).map_err(|_| "error when parse from raw data")?;
+                let raw_name =
+                    from_utf8(&raw_name).map_err(|_| "error when parse from raw data")?;
                 server_name = Some(String::from(raw_name).into_boxed_str());
             }
         }
     }
-    Ok(TlsClientHello {
-        server_name
-    })
+    Ok(TlsClientHello { server_name })
 }
 
 // struct {

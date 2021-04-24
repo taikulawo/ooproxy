@@ -1,8 +1,20 @@
-use std::{cell::RefCell, cmp, future::Future, io::{self}, pin::Pin, task::{Context, Poll}, time::Duration};
+use std::{
+    cell::RefCell,
+    cmp,
+    future::Future,
+    io::{self},
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 
-use log::{debug, trace};
-use tokio::{io::{AsyncRead, AsyncWrite, ReadBuf}, net::TcpStream, time::{Instant, Sleep, sleep}};
 use self::Side::{Left, Right};
+use log::{debug, trace};
+use tokio::{
+    io::{AsyncRead, AsyncWrite, ReadBuf},
+    net::TcpStream,
+    time::{sleep, Instant, Sleep},
+};
 
 macro_rules! try_poll {
     ($expr:expr) => {
@@ -49,7 +61,7 @@ impl StreamWithBuffer {
             pos: 0,
             cap: 0,
             read_eof: false,
-            done: false
+            done: false,
         }
     }
     pub fn is_empty(&self) -> bool {
@@ -63,8 +75,8 @@ impl StreamWithBuffer {
             let mut buf = ReadBuf::new(buf);
             stream
                 .poll_read(cx, &mut buf)
-                .map_ok(|_|buf.filled().len())
-        }else {
+                .map_ok(|_| buf.filled().len())
+        } else {
             SHARED_BUFFER.with(|buf| {
                 let shared_buf = &mut buf.borrow_mut()[..];
                 let mut buf = ReadBuf::new(shared_buf);
@@ -73,50 +85,55 @@ impl StreamWithBuffer {
                     .map_ok(|_| buf.filled().len())
             })
         });
-        
+
         if n == 0 {
             self.read_eof = true;
-        }else {
+        } else {
             self.pos = 0;
             self.cap = n;
         }
         Poll::Ready(Ok(n))
     }
 
-    pub fn poll_write_buffer_to(&mut self, ctx: &mut Context, writer_stream: &mut TcpStream) -> Poll<io::Result<usize>> {
+    pub fn poll_write_buffer_to(
+        &mut self,
+        ctx: &mut Context,
+        writer_stream: &mut TcpStream,
+    ) -> Poll<io::Result<usize>> {
         let writer = Pin::new(writer_stream);
         let result = if let Some(ref buf) = self.buf {
-            writer.poll_write(ctx, &buf[self.pos .. self.cap])
+            writer.poll_write(ctx, &buf[self.pos..self.cap])
         } else {
             SHARED_BUFFER.with(|cell| {
                 let buf = cell.borrow_mut();
-                writer.poll_write(ctx, &buf[self.pos .. self.cap])
+                writer.poll_write(ctx, &buf[self.pos..self.cap])
             })
         };
         match result {
-            Poll::Ready(Ok(0)) => Poll::Ready(Err(io::Error::new(io::ErrorKind::WriteZero,"write zero bytes into writer"))),
+            Poll::Ready(Ok(0)) => Poll::Ready(Err(io::Error::new(
+                io::ErrorKind::WriteZero,
+                "write zero bytes into writer",
+            ))),
             Poll::Ready(Ok(n)) => {
                 self.pos += n;
                 trace!("{} bytes written", n);
                 Poll::Ready(Ok(n))
             }
-            Poll::Pending if self.buf.is_none() => {
-                SHARED_BUFFER.with(|shared_buf| {
-                    let shared_buf = shared_buf.borrow();
-                    let remaining = self.cap - self.pos;
-                    let mut buf = vec![0; cmp::max(PRIVATE_BUF_SIZE, remaining)];
-                    buf[..remaining].copy_from_slice(&shared_buf[self.pos .. self.cap]);
-                    Poll::Pending
-                })
-            }
-            _ => result
+            Poll::Pending if self.buf.is_none() => SHARED_BUFFER.with(|shared_buf| {
+                let shared_buf = shared_buf.borrow();
+                let remaining = self.cap - self.pos;
+                let mut buf = vec![0; cmp::max(PRIVATE_BUF_SIZE, remaining)];
+                buf[..remaining].copy_from_slice(&shared_buf[self.pos..self.cap]);
+                Poll::Pending
+            }),
+            _ => result,
         }
     }
 }
 #[derive(Debug, Clone)]
 enum Side {
     Left,
-    Right
+    Right,
 }
 pub struct BiPipe {
     left: StreamWithBuffer,
@@ -133,7 +150,7 @@ pub fn pipe(left: StreamWithBuffer, right: StreamWithBuffer) -> BiPipe {
 }
 
 impl BiPipe {
-    fn poll_one_side(&mut self, ctx: &mut Context, side: Side) -> Poll<io::Result<()>>{
+    fn poll_one_side(&mut self, ctx: &mut Context, side: Side) -> Poll<io::Result<()>> {
         let Self {
             ref mut left,
             ref mut right,
@@ -154,12 +171,12 @@ impl BiPipe {
                 match Pin::new(&mut writer.stream).poll_shutdown(ctx) {
                     Poll::Pending => return Poll::Pending,
                     Poll::Ready(Ok(())) => (),
-                    Poll::Ready(Err(err)) => debug!("fail to shutdown: {}", err)
+                    Poll::Ready(Err(err)) => debug!("fail to shutdown: {}", err),
                 }
                 // writer 已经关闭
                 // reader 将在另一个 poll_one_side 中作为 writer 被关闭
                 reader.done = true;
-                return Poll::Ready(Ok(()))
+                return Poll::Ready(Ok(()));
             }
         }
     }
@@ -170,18 +187,18 @@ impl Future for BiPipe {
     // https://stackoverflow.com/questions/28587698/whats-the-difference-between-placing-mut-before-a-variable-name-and-after-the
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if !self.left.done {
-            if let Poll::Ready(Err(err)) = self.poll_one_side( cx, Left) {
-                return Poll::Ready(Err(err))
+            if let Poll::Ready(Err(err)) = self.poll_one_side(cx, Left) {
+                return Poll::Ready(Err(err));
             }
         }
         if !self.right.done {
             if let Poll::Ready(Err(err)) = self.poll_one_side(cx, Right) {
-                return Poll::Ready(Err(err))
+                return Poll::Ready(Err(err));
             }
         }
-        match(self.left.done, self.right.done) {
+        match (self.left.done, self.right.done) {
             (true, true) => Poll::Ready(Ok(())),
-            (false,false) => Poll::Pending,
+            (false, false) => Poll::Pending,
             _ => {
                 match &mut self.half_close_deadline {
                     // None 是第一次进入

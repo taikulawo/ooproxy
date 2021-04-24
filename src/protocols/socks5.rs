@@ -1,36 +1,38 @@
-use std::io::{self, ErrorKind };
-use std::net::{
-    IpAddr
-};
-use bytes::Bytes;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
+use std::io::{self, ErrorKind};
+use std::net::IpAddr;
+
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::client::{
-    Destination,
-    Address,
-};
+use crate::client::{Address, Destination};
 
 macro_rules! err {
     ($msg: expr) => {
         return Err(io::Error::new(ErrorKind::Other, $msg));
-    }
+    };
 }
-pub async fn handshake<T>(remote: &mut TcpStream, dest: &Destination, data: Option<T>) -> io::Result<()>
-where T: AsRef<[u8]>
+pub async fn handshake<T>(
+    remote: &mut TcpStream,
+    dest: &Destination,
+    data: Option<T>,
+) -> io::Result<()>
+where
+    T: AsRef<[u8]>,
 {
-    let Destination {
-        ref host,
-        ref port,
-    } = dest;
+    let Destination { ref host, ref port } = dest;
     // 终于到我最熟悉的socks5协议了
     // 下面开始socks5握手
     // https://tools.ietf.org/html/rfc1928#section-3
-    do_handshake(remote, dest,data).await?;
+    do_handshake(remote, dest, data).await?;
     Ok(())
 }
-async fn do_handshake<T>(remote: &mut TcpStream, dest: &Destination, data: Option<T>) -> io::Result<()>
-where T: AsRef<[u8]>
+async fn do_handshake<T>(
+    remote: &mut TcpStream,
+    dest: &Destination,
+    data: Option<T>,
+) -> io::Result<()>
+where
+    T: AsRef<[u8]>,
 {
     // +----+----------+----------+
     // |VER | NMETHODS | METHODS  |
@@ -43,10 +45,8 @@ where T: AsRef<[u8]>
     let mut buf = vec![0; 2];
     remote.read_exact(&mut buf).await?;
     match buf[..] {
-        [0x05, 0x00] => {
-            ()
-        }
-        _ => err!("")
+        [0x05, 0x00] => (),
+        _ => err!(""),
     }
     let request = build_request(dest)?;
     remote.write_all(&request).await?;
@@ -80,7 +80,7 @@ fn build_request(dest: &Destination) -> io::Result<Vec<u8>> {
                 //   the address is a version-6 IP address, with a length of 16 octets.
                 buf.extend(&i.octets());
             }
-        }
+        },
         Address::Domain(ref name) => {
             let len = name.len();
             buf.push(0x03);

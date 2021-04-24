@@ -7,26 +7,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'ooproxy'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "ooproxy",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'ooproxy'",
+            "name": "Cargo launch",
             "cargo": {
                 "args": [
                     "build",
@@ -38,101 +19,20 @@
                     "kind": "bin"
                 }
             },
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "program": "${cargo:program}",
+            "args": ["--port", "9999","--socks5", "127.0.0.1:1080"],
+            "sourceLanguages": ["rust"],
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'ooproxy'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=ooproxy",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "ooproxy",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "name": "Debug ooproxy",
+            "preLaunchTask": "rust: cargo build",
+            "program": "${workspaceFolder}/target/debug/ooproxy",
+            // args 里必须都是 string， 否则会
+            // https://github.com/vadimcn/vscode-lldb/issues/427
+            "args": ["--port", "9999","--socks5", "127.0.0.1:1080"],
+            "cwd": "${workspaceFolder}",
         },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'cell'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=cell",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "cell",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'cell'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=cell",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "cell",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'to_owned'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=to_owned",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "to_owned",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'to_owned'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=to_owned",
-                    "--package=ooproxy"
-                ],
-                "filter": {
-                    "name": "to_owned",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        }
     ]
 }

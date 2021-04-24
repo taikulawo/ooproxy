@@ -1,14 +1,12 @@
-use std::{
-    io::{
+use std::{io::{
         self,
+        // https://stackoverflow.com/questions/25273816/why-do-i-need-to-import-a-trait-to-use-the-methods-it-defines-for-a-type
+        // 注释掉 Write trait 试下
         Write
-    },
-    net::{
+    }, net::{
         IpAddr,
         SocketAddr
-    },
-    sync::Arc,
-};
+    }, sync::Arc, u16};
 
 use ooproxy::{
     client::Client,
@@ -22,11 +20,16 @@ use clap::{
 };
 
 use log:: {
-    LevelFilter
+    LevelFilter,
+    info,
+    error,
+    warn
 };
 
 #[tokio::main]
 async fn main() {
+    
+
     let yaml = load_yaml!("./cli.yaml");
     let app = clap::App::from_yaml(&yaml)
         .setting(AppSettings::ColoredHelp)
@@ -34,13 +37,15 @@ async fn main() {
         .get_matches();
     // enable log!
     let mut logger = env_logger::Builder::new();
+    
     logger
         .filter(None, "info".parse().expect("unknown log level"))
         .filter_module("tokio_net", LevelFilter::Warn)
         .target(env_logger::Target::Stdout)
         .format(|buf, r | writeln!(buf, "[{}] {}", r.level(), r.args()))
         .init();
-
+    // info! 等需要放到 logger 之后，否则不会输出
+    // info!("111");
     let host: IpAddr = app.value_of("host")
         .expect("missing host")
         .parse()
@@ -60,10 +65,14 @@ async fn main() {
         port
     });
     // start listening
-    let mut addr = SocketAddr::new("0.0.0.0".parse().unwrap(),8080);
+    let mut addr = SocketAddr::new(host, port as u16);
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind port");
+    info!("listen on {}", addr);
     while let Ok((socks, addr)) = listener.accept().await {
-        handle_client(socks, config.clone());
+        let result = handle_client(socks, config.clone()).await;
+        if let Err(err) = result {
+            info!("handle_client error {}", err);
+        }
     }
 }
 
@@ -72,9 +81,9 @@ async fn handle_client(peer_left: TcpStream, config: Arc<Config>) -> io::Result<
     if client.dest.port == 443 {
         // https
         // try parse server name from TLS server_name extension
-        client.retrive_dest().await?.connect_remote_server();
+        client.retrive_dest().await?.connect_remote_server().await?;
     }else {
-        client.connect_remote_server();
+        client.connect_remote_server().await?;
     }
     Ok(())
 }
