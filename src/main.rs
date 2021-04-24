@@ -28,8 +28,6 @@ use log:: {
 
 #[tokio::main]
 async fn main() {
-    
-
     let yaml = load_yaml!("./cli.yaml");
     let app = clap::App::from_yaml(&yaml)
         .setting(AppSettings::ColoredHelp)
