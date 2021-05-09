@@ -31,7 +31,7 @@
             "program": "${workspaceFolder}/target/debug/ooproxy",
             // args 里必须都是 string， 否则会
             // https://github.com/vadimcn/vscode-lldb/issues/427
-            "args": ["--port", "9999","--socks5", "127.0.0.1:1080"],
+            "args": ["--port", "9999","--socks5", "192.168.50.88:1080", "--log-level", "debug"],
             "cwd": "${workspaceFolder}",
             "sourceLanguages": ["rust"]
         },

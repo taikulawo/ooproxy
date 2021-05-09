@@ -11,11 +11,11 @@ use std::{
 };
 
 use clap::{load_yaml, App, AppSettings};
-use ooproxy::{client::Client, config::Config};
+use ooproxy::{client::Client, config::Config, stream::{BiPipe, StreamWithBuffer}};
 use tokio::net::{TcpListener, TcpStream};
 
 use log::{error, info, warn, LevelFilter};
-
+use backtrace::Backtrace;
 #[tokio::main]
 async fn main() {
     let yaml = load_yaml!("./cli.yaml");
@@ -25,12 +25,33 @@ async fn main() {
         .get_matches();
     // enable log!
     let mut logger = env_logger::Builder::new();
-
+    let log_level: &str = app.value_of("log-level").expect("we need log level");
     logger
-        .filter(None, "info".parse().expect("unknown log level"))
+        .filter(None, log_level.parse().expect("unknown log level"))
         .filter_module("tokio_net", LevelFilter::Warn)
         .target(env_logger::Target::Stdout)
-        .format(|buf, r| writeln!(buf, "[{}] {}", r.level(), r.args()))
+        .format(|buf, r| {
+            if r.level().as_str().to_uppercase() == "ERROR" {
+                let bt = Backtrace::new();
+                return writeln!(
+                    buf,
+                    "[{}] {}:{} {} {:?}",
+                    r.level(),
+                    r.file().unwrap_or("unknown"),
+                    r.line().unwrap_or(0),
+                    r.args(),
+                    bt
+                );
+            }
+            writeln!(
+                buf,
+                "[{}] {}:{} {}",
+                r.level(),
+                r.file().unwrap_or("unknown"),
+                r.line().unwrap_or(0),
+                r.args()
+            )
+        })
         .init();
     // info! 等需要放到 logger 之后，否则不会输出
     // info!("111");
@@ -62,19 +83,21 @@ async fn main() {
     while let Ok((socks, addr)) = listener.accept().await {
         let result = handle_client(socks, config.clone()).await;
         if let Err(err) = result {
-            info!("handle_client error {}", err);
+            error!("handle_client error {}", err);
         }
     }
 }
 
 async fn handle_client(peer_left: TcpStream, config: Arc<Config>) -> io::Result<()> {
-    let client = Client::from_socket(peer_left, config).await?;
-    if client.dest.port == 443 {
+    let mut client = Client::from_socket(peer_left, config).await?;
+    let remote = if client.dest.port == 443 {
         // https
         // try parse server name from TLS server_name extension
-        client.retrive_dest().await?.connect_remote_server().await?;
+        client = client.retrive_dest().await?;
+        client.connect_remote_server().await?
     } else {
-        client.connect_remote_server().await?;
-    }
+        client.connect_remote_server().await?
+    };
+    client.do_pipe(remote).await?;
     Ok(())
 }

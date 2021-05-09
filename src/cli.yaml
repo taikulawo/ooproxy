@@ -33,3 +33,7 @@ args:
         # default_value: true
         help: >
           Parse SNI from TLS client hello, and then use server_name extension to resolve dns remotely. Useful for bypass dns poisoning.
+    - log-level:
+        long: log-level
+        value_name: log-level
+        default_value: "info"

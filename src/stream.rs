@@ -141,7 +141,8 @@ pub struct BiPipe {
     half_close_deadline: Option<Pin<Box<Sleep>>>,
 }
 
-pub fn pipe(left: StreamWithBuffer, right: StreamWithBuffer) -> BiPipe {
+pub fn pipe(left: TcpStream, right: TcpStream) -> BiPipe {
+    let (left, right) = (StreamWithBuffer::new(left),StreamWithBuffer::new(right));
     BiPipe {
         left,
         right,

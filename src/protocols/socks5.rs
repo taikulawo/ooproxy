@@ -1,6 +1,7 @@
 use std::io::{self, ErrorKind};
 use std::net::IpAddr;
 
+use log::debug;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -60,6 +61,7 @@ where
     // write out all data from client
     // pipe started
     if let Some(data) = data {
+        debug!("Early data has been flushed into socket after finished socks5 handshake");
         remote.write_all(data.as_ref()).await?;
     }
     Ok(())

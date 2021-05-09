@@ -1,5 +1,7 @@
 use std::ops::Range;
 use std::str::from_utf8;
+
+use log::debug;
 const EXT_SERVER_NAME: &[u8] = &[0, 0];
 // len_range作为长度，获取长度之内的数据
 // 0x01 0x02 0x03 0x04
@@ -104,6 +106,7 @@ pub fn parse_client_hello(data: &[u8]) -> Result<TlsClientHello, &'static str> {
                 let raw_name =
                     from_utf8(&raw_name).map_err(|_| "error when parse from raw data")?;
                 server_name = Some(String::from(raw_name).into_boxed_str());
+                debug!("TLS parser domain: {}", server_name.as_ref().unwrap());
             }
         }
     }

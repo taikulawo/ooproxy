@@ -8,15 +8,15 @@ use std::{
 };
 
 use bytes::{Bytes, BytesMut};
-use log::{debug, info};
+use log::{debug, error, info};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     time::timeout,
 };
 
-use crate::config::Config;
 use crate::protocols::handshake;
+use crate::{config::Config, stream::pipe};
 use crate::{
     linux::{get_original_address_v4, get_original_address_v6},
     tls,
@@ -185,7 +185,7 @@ impl Client {
     // 起手流量是 TLS client hello
     // 需要我们从 TLS 嗅探出 domain name
     // 用于做 DNS 远程解析
-    // 注意： 这里是 (self), 所以这函数会 contume 掉 Self
+    // 注意： 这里是 (self), 所以这函数会 consume 掉 Self
     pub async fn retrive_dest(self) -> io::Result<Client> {
         let Client {
             mut left,
@@ -236,9 +236,27 @@ impl Client {
             ..
         } = self;
         let socks_server = config.socks5_server;
-        let mut stream = TcpStream::connect(socks_server).await?;
+        let mut stream = match TcpStream::connect(socks_server).await {
+            Ok(stream) => stream,
+            Err(err) => {
+                return Err(io::Error::new(
+                    io::ErrorKind::ConnectionRefused,
+                    format!("connect remote socks server failed with error {}", err),
+                ))
+            }
+        };
         handshake(&mut stream, dest, self.pending_data.clone()).await?;
         // we should handshake with socks5 server as the socks client
         Ok(stream)
+    }
+    // use self, consume self
+    pub async fn do_pipe(self, remote: TcpStream) -> io::Result<()> {
+        match pipe(self.left, remote).await {
+            Ok(()) => Ok(()),
+            Err(err) => Err(io::Error::new(
+                io::ErrorKind::BrokenPipe,
+                format!("failed to pipe connection with err {}", err),
+            )),
+        }
     }
 }
