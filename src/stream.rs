@@ -119,13 +119,16 @@ impl StreamWithBuffer {
                 trace!("{} bytes written", n);
                 Poll::Ready(Ok(n))
             }
-            Poll::Pending if self.buf.is_none() => SHARED_BUFFER.with(|shared_buf| {
-                let shared_buf = shared_buf.borrow();
+            Poll::Pending if self.buf.is_none() => {
                 let remaining = self.cap - self.pos;
-                let mut buf = vec![0; cmp::max(PRIVATE_BUF_SIZE, remaining)];
-                buf[..remaining].copy_from_slice(&shared_buf[self.pos..self.cap]);
-                Poll::Pending
-            }),
+                SHARED_BUFFER.with(|shared_buf| {
+                    let shared_buf = shared_buf.borrow();
+                    let mut buf = vec![0; cmp::max(PRIVATE_BUF_SIZE, remaining)];
+                    buf[..remaining].copy_from_slice(&shared_buf[self.pos..self.cap]);
+                    self.buf = Some(buf.into_boxed_slice());
+                    Poll::Pending
+                })
+            },
             _ => result,
         }
     }
@@ -142,7 +145,7 @@ pub struct BiPipe {
 }
 
 pub fn pipe(left: TcpStream, right: TcpStream) -> BiPipe {
-    let (left, right) = (StreamWithBuffer::new(left),StreamWithBuffer::new(right));
+    let (left, right) = (StreamWithBuffer::new(left), StreamWithBuffer::new(right));
     BiPipe {
         left,
         right,
