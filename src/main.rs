@@ -15,7 +15,6 @@ use ooproxy::{client::Client, config::Config, stream::{BiPipe, StreamWithBuffer}
 use tokio::net::{TcpListener, TcpStream};
 
 use log::{error, info, warn, LevelFilter};
-use backtrace::Backtrace;
 #[tokio::main]
 async fn main() {
     let yaml = load_yaml!("./cli.yaml");
@@ -31,18 +30,6 @@ async fn main() {
         .filter_module("tokio_net", LevelFilter::Warn)
         .target(env_logger::Target::Stdout)
         .format(|buf, r| {
-            if r.level().as_str().to_uppercase() == "ERROR" {
-                let bt = Backtrace::new();
-                return writeln!(
-                    buf,
-                    "[{}] {}:{} {} {:?}",
-                    r.level(),
-                    r.file().unwrap_or("unknown"),
-                    r.line().unwrap_or(0),
-                    r.args(),
-                    bt
-                );
-            }
             writeln!(
                 buf,
                 "[{}] {}:{} {}",

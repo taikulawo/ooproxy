@@ -49,9 +49,17 @@ where
         [0x05, 0x00] => (),
         _ => err!(""),
     }
-    let request = build_request(dest)?;
-    remote.write_all(&request).await?;
-    let mut buf = vec![0, 10];
+    let mut buf = Vec::new();
+    build_request(&mut buf, dest);
+    remote.write_all(&buf).await?;
+    
+    // 我竟然给写成这样
+    // 没有分配长度为10的Vec，而是初始化了 [0, 10]
+    // 最后发给client时没将socks connect reply 数据删掉 :(
+    // 还是要善用wireshark的同时抓多网卡的功能，复现问题现场
+    // let mut buf = vec![0, 10];
+    let mut buf = vec![0; 10];
+
     // 0x05,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00
     remote.read_exact(&mut buf).await?;
     if buf[..2] != [0x05, 0x00] {
@@ -67,9 +75,8 @@ where
     Ok(())
 }
 
-fn build_request(dest: &Destination) -> io::Result<Vec<u8>> {
+fn build_request(buf: &mut Vec<u8>, dest: &Destination) {
     // https://tools.ietf.org/html/rfc1928#section-4
-    let mut buf = vec![];
     buf.extend(&[0x05, 0x01, 0x00]);
     match dest.host {
         Address::Ip(ip) => match ip {
@@ -93,5 +100,4 @@ fn build_request(dest: &Destination) -> io::Result<Vec<u8>> {
     // 端口两字节
     buf.push((dest.port >> 8) as u8);
     buf.push(dest.port as u8);
-    Ok(buf)
 }

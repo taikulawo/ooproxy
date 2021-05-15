@@ -125,6 +125,7 @@ impl Client {
             if ver != 0x05 {
                 return error_invalid_input("Neither a NATed or SOCKSv5 connection ");
             }
+            // 作为 socks server 进行握手
             let n_methods = peer_left.read_u8().await?;
             let mut buf = vec![0u8; n_methods as usize];
             peer_left.read_exact(&mut buf).await?;
