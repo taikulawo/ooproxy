@@ -142,7 +142,7 @@ impl Client {
                 0x01 => {
                     // ipv4
                     let mut buf = [0u8; 4];
-                    peer_left.read_exact(&mut buf).await;
+                    peer_left.read_exact(&mut buf).await?;
                     buf.into()
                 }
                 0x03 => {
