@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::{cell::{Cell, RefCell}, ops::Deref};
 #[derive(Debug)]
 pub struct Myself<'a> {
     name: &'static str,
@@ -6,21 +6,30 @@ pub struct Myself<'a> {
     age: Cell<u32>,
     a: &'a mut u32,
 }
+
+fn print(s: &mut String){
+    let a = &mut *s;
+    take(a);
+    &mut *s;
+}
+fn take(s: &String){}
+
+struct MyBox<T>(T);
+impl<T> MyBox<T> {
+    fn new(v: T) -> MyBox<T> {
+        MyBox(v)
+    }
+}
+
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+fn hello(s: &str) {}
 fn main() {
-    let my = Myself {
-        age: Cell::new(22),
-        location: RefCell::new(String::from("beijing")),
-        name: "wuweichao",
-        a: &mut 1,
-    };
-    my.age.set(1);
-    my.location.borrow();
-    my.location.borrow();
-    my.location.borrow();
-
-    *(my.a) = 2;
-    let a1 = &my.a;
-    let a2 = &my.a;
-
-    println!("{:?}", &my);
+    let mut s = String::from("");
+    let a = MyBox::new(s);
+    hello(&*a);
 }
