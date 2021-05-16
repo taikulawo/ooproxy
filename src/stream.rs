@@ -175,7 +175,7 @@ impl BiPipe {
                 match Pin::new(&mut writer.stream).poll_shutdown(ctx) {
                     Poll::Pending => return Poll::Pending,
                     Poll::Ready(Ok(())) => (),
-                    Poll::Ready(Err(err)) => debug!("fail to shutdown: {}", err),
+                    Poll::Ready(Err(err)) => debug!("Failed to shutdown, maybe connect error. Error: {}", err),
                 }
                 // writer 已经关闭
                 // reader 将在另一个 poll_one_side 中作为 writer 被关闭

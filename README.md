@@ -9,3 +9,10 @@
 这个仓库预期是打造成新的 https://github.com/gfreezy/seeker
 
 就是不知道有没有时间和精力去做了
+
+```
+# 添加
+iptables -t nat -A OUTPUT -p tcp -m multiport --dports 80,443 -j REDIRECT --to-port 9999
+# 删除
+iptables -t nat -D OUTPUT -p tcp -m multiport --dports 80,443 -j REDIRECT --to-port 9999
+```
