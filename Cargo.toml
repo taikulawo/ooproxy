@@ -11,6 +11,8 @@ tokio = { version = "1", features = ["full"] }
 bytes = "1"
 clap = { version = "2.33.3", features = ["yaml"]}
 env_logger = "0.8.3"
+trust-dns-resolver = { version = "0.20.3", features = ["dns-over-rustls"]}
+async-trait = { version = "0.1.50"}
 [target.'cfg(target_os = "linux")'.dependencies]
 libc = "0.2"
 nix = "0.19"
